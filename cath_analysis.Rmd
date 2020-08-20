@@ -1,0 +1,113 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+
+cle.dir.raw <- file.path(getwd(), "..", "data", "pdbcle")
+pdb.files <- sort(list.files(cle.dir.raw))
+pdb.df <- data.frame("pdb.cle" = pdb.files)
+pdb.df
+
+
+```
+
+
+```{r}
+
+df <- read.table("data/cath-b-newest-all", stringsAsFactors = F, sep = " ", 
+                 col.names = c("pdb_id", "version", "hier", "seq")) %>% 
+      separate(hier, c("C", "A", "TO", "H"), sep="\\.")
+
+df$C <- as.factor(df$C)
+df$A <- as.factor(df$A)
+df$TO <- as.factor(df$TO)
+df$H <- as.factor(df$H)
+
+```
+
+
+```{r}
+
+df 
+
+```
+
+
+```{r}
+
+df.cath <- df %>% inner_join(pdb.df, c("pdb_id"="pdb.cle"))
+
+```
+
+```{r, warning=F, fig.width=10}
+
+p1 <- df.cath %>% ggplot(aes(C)) + geom_histogram(stat = "count")
+p2 <- df.cath %>% ggplot(aes(A)) + geom_histogram(stat = "count")
+
+grid.arrange(p1, p2, ncol=2)
+
+```
+
+
+The topology level is analogous to the SCOP fold level and groups structures that have a similar
+number and arrangement of secondary structure elements with the same connectivity
+https://bmcstructbiol.biomedcentral.com/track/pdf/10.1186/1472-6807-9-23?site=bmcstructbiol.biomedcentral.com
+
+```{r, fig.width=12}
+
+df.cath <- df.cath %>% select(-version, -seq)
+df.cath.sample <- head(df.cath, 10)
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+merge(df.cath.sample, df.cath.sample, by = ("C", "A", ""))
+
+# df.cath.sample
+
+
+
+=======
+>>>>>>> e459271457e44d4c038d5109717f642fdfc02619
+=======
+>>>>>>> e459271457e44d4c038d5109717f642fdfc02619
+=======
+>>>>>>> e459271457e44d4c038d5109717f642fdfc02619
+for(i in 1:nrow(df.cath)){
+  cat(i, "\n")
+  for(j in i:nrow(df.cath)){
+    if(df.cath.sample$TO[i] != df.cath.sample$TO[j]){
+      write.csv(c("tags" = sprintf("%s:%s.%s:%s.%s:%s.%s:%s", 
+                                df.cath.sample$C[i], df.cath.sample$C[j], 
+                                df.cath.sample$A[i], df.cath.sample$A[j], 
+                                df.cath.sample$TO[i], df.cath.sample$TO[j],
+                                df.cath.sample$H[i], df.cath.sample$H[j]),
+                  "seq" = sprintf("%s:%s", df.cath.sample$pdb_id[i], df.cath.sample$pdb_id[j])),
+                file.path(getwd(), "pairs.csv"), append = T, col.names = F)
+      
+      # P <-  rbind(P, )
+    }
+  }
+}
+
+df.cath.tags <- as.data.frame(P)
+
+```
+
+
+```{r}
+
+df.cath.sampled <- df.cath %>% group_by(C, A, TO, H) %>% sample_n(1)
+
+write.table(df.cath.sampled, file.path(getwd(), "cath.csv" ), row.names = F, sep = ";")
+
+
+```
+

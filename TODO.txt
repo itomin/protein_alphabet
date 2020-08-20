@@ -1,0 +1,20 @@
+
+* Signifikanz und Simulations einer Null Hypothese:
+    1. Random Shuffling der Eingabesequenzen im Alphabet unter Verwendung der Markov Models
+    2. Für jedes Motif finde Vorkommen in Schritt 1, merke in welcher CAT es vorkommt
+    3. Berechne Erwartungswert für jeden Motif
+    4. Anwenden  Chi2 Statistik, Erwartungswert - Beopbachtungswert 
+
+
+* Signifikanz unter Betrachtung einer theoretisch geschätzen Verteilung
+    1. Schätzen der Wahrscheinlichkeiten für alle Motife mittels eines Markov Models
+
+
+
+
+histogramm aller alphabete
+histogramm abhängig von länge des alphabets vergleichen
+korrelation
+
+
+ausblick - sämtiche infixe, gaps betrachten

@@ -1,0 +1,83 @@
+---
+title: "CS219_Auswertung"
+author: "Johannes Tomin"
+date: "25 Jänner 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# df.stat <- read.csv("C:/Users/tomin/dev/data/cath_hits_statistics.csv", sep=",", header = FALSE,
+#                     col.names = c("hitKey","expected","N","L","freq","chi","chi_corrected","ent"))
+#                # ,  stringsAsFactors = F, dec = ".") %>% rename(V1)
+#                # # mutate(lambda = as.numeric(lambda), N = as.numeric(N))
+# head(df.stat)
+
+```
+
+
+```{r}
+
+library(seqinr)
+
+
+for(s in c("132lA00", "1a9xA04", "16pkA02", "1a00B00", "1a1wA00", "1a44A00", 
+          "1a9xA06", "1a79A01", "1auyB00", "1ar0A00", "1aroP03", "1attA01")) {
+  cs <- read.fasta(sprintf("C:/Users/tomin/dev/data/cs219/%s.as", s))
+  atom <- read.fasta(sprintf("C:/Users/tomin/dev/data/cs219/%s.fasta", s))
+  print(paste(cs[[1]][1:50], collapse=""))
+  print(paste(atom[[1]][1:50], collapse=""))
+  print(paste0(length(cs[[1]]), " - ", length(atom[[1]])))
+  print("===================")
+}
+
+
+
+```
+
+
+```{r}
+
+list(1,2,3,4,54,6)[1:5]
+
+```
+
+
+
+```{r}
+
+df.anno <- read.csv("C:/Users/tomin/dev/data/cath_annotation_filtered.csv", sep=",", header = FALSE,
+                    col.names = c("seq","C","A","TO","H","L","hitKey"))
+
+df.anno
+
+```
+
+
+```{r}
+
+# ggplot(df, aes(x=weight)) + 
+#   geom_histogram(binwidth=1)
+df.stat %>% ggplot(aes(x=L)) + geom_histogram(binwidth = 1)
+
+
+```
+
+```{r}
+
+df.stat %>% filter(expected < 10) %>% ggplot(aes(x=expected))+ geom_histogram(binwidth = 0.5)
+
+```
+
+```{r}
+df.stat %>% filter(freq < 100) %>% ggplot(aes(x=freq))+ geom_histogram(binwidth = 2)
+```
+
+```{r}
+df.stat  %>% ggplot(aes(x=ent))+ geom_histogram(binwidth = 0.2)
+```
+

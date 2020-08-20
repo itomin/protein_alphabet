@@ -1,0 +1,203 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+
+```{r include=FALSE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(splitstackshape)
+library(cowplot)
+
+hits <- read.csv("../data/pairwise_intrafold_clehits.csv", sep = ";", header = F, stringsAsFactors = F) %>% rename(motif = V1, seqs = V2)
+
+cath.annotated <- read.csv("../data/hits_class_arch_top_crosstab.csv", sep = ",", header = F, stringsAsFactors = F) %>% 
+                  rename(motif=V1, topology=V2, n=V3) %>% 
+                  separate(topology, c("C", "A", "TO"), sep = "\\.") %>% 
+                  mutate(L = nchar(motif)) 
+
+
+cath <- read.csv("../data/cath_annotation.csv", sep = ";", header = F, stringsAsFactors = F) %>% rename(seq = V1) %>%
+        separate(V2, c("C", "A", "TO", "H"), sep="\\.") %>% mutate(C.label = ifelse(C == 1, "alpha", ifelse(C==2, "beta", ifelse(C==3, "alpha.beta", "other")))) %>% 
+        mutate(TO = as.integer(TO), A=as.integer(A), C=as.integer(C), C.label=as.factor(C.label)) %>% 
+        separate(seq, c("pdb.id", "seitenkette"), sep=":")
+        
+
+hits <- hits %>%
+  mutate(L = nchar(motif)) %>% rowwise() %>%
+  mutate(num.of.seq = length(unlist(strsplit(seqs, split=","))))
+  
+
+
+
+
+```
+
+
+
+
+```{r eval=FALSE, include=FALSE}
+# # cSplit(head(hits.annotated), splitCols = "V2", sep=",", stripWhite = F) %>% 
+# 
+# cath.to.c <- function(S) {
+#   paste(unlist(lapply(unlist(strsplit(S, ",")), function(S) {
+#     unlist(strsplit(S, "\\."))[1]
+#   })), collapse = ",")
+# }
+# 
+# hits.annotated <- hits.annotated %>% rowwise %>% mutate(cath.class = cath.to.c(V2))
+# 
+
+  
+```
+
+
+
+
+```{r eval=FALSE, include=FALSE}
+head(hits.annotated) %>% 
+  select(V1, cath.class) %>% cSplit(splitCols = "cath.class", sep=",", stripWhite = F)
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+library(tidyr)
+library(gmodels)
+ melt(mydata, id=c("id","time"))
+ 
+tt <- hits.annotated %>% 
+  select(V1, cath.class) %>% cSplit(splitCols = "cath.class", sep=",", stripWhite = F) %>% 
+  melt(cl = c("V1")) %>% na.omit() # %>% mutate(value = as.factor(value))
+  # gather("V1", "class", 2:47)
+
+
+table(tt$V1, tt$value)
+
+
+```
+
+
+
+#### Wie balanciert ist der Datensatz zwischen den Klassen und zwischen den Architekturen?
+
+Es wurden alle Sequenzen paarweise miteinander verglichen, welche sich nicht gemeinsam in einer Topologie - intrafold - befinden. 
+Wobei angenommen, dass Topologie Level in CATH analog zu dem Fold Level in der SCOP DB ist.
+
+
+ C = Class 
+ A = Architecture
+ T = Topology
+ H = Homology
+
+
+
+
+```{r echo=FALSE, fig.height=6, fig.width=14}
+
+p1 <- cath %>% group_by(A,C) %>% count %>% 
+  # unite(CAT, c("C", "A", "TO")) %>% 
+  unite(CA, c("C", "A")) %>% 
+  ggplot(aes(CA, n)) + geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+xlab("Class_Architecture")+
+  ggtitle("Anzahl der Sequenzen in Architecture")
+
+p2 <- cath %>% group_by(C.label) %>% count %>% 
+  ggplot(aes(C.label, n)) + geom_bar(stat = "identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+xlab("Class")+
+  ggtitle("Anzahl der Sequenzen in Class")
+  
+# grid.arrange(p1, p2, ncol=2, )
+plot_grid(p1, p2,  ncol = 2, rel_widths = c(2/3, 1/3))
+
+```
+
+
+
+
+#### Was lässt sich über die Länge der Motife auf den ersten Blick sagen?
+Etwa 25% der Motife sind mehr als 20 Zeichen lang. 
+```{r echo=FALSE, fig.height=6, fig.width=14}
+
+options(scipen = 999)
+
+p1 <-   hits %>% ggplot(aes(L)) +
+  geom_histogram(binwidth = 1) +
+  xlab("Absolute Motiflänge") + ylab("Häufigkeit")+
+  scale_x_continuous(breaks=seq(0, 80, 5)) + 
+  scale_y_continuous(breaks=seq(0, 350000, 50000))
+
+
+p2 <- hits %>% ggplot(aes(L)) + 
+  stat_ecdf(geom = "point") +
+  xlab("Motiflänge") + ylab("Kumulierte Verteilung")
+  
+  
+grid.arrange(p1, p2, ncol=2)
+
+```
+
+
+
+#### Welche Motife mit mehr als 15 Zeichen kommen sowohl in Alpha-Klasse als auch in Beta-Klasse vor?
+```{r echo=FALSE}
+
+head(cath.annotated %>% 
+  filter(L > 15) %>% 
+  group_by(motif, C) %>% summarise(anzahl.sequenzen = sum(n)) %>% 
+  spread(C, anzahl.sequenzen) %>% rename(alpha="1", beta="2", alpha.beta="3", other="4") %>% 
+  filter(alpha > 0 & beta > 0))
+  
+
+```
+
+
+
+
+#### Berechne Informationsmaß für Motife  bzw  wie verzerrt sind die Motife?
+Es lassen sich viele lange Sequenzen beobachten mit einem stark verzerrten Aufkommen weniger Buchstaben,
+z.B hhhhhhhhhhhhhhhhhhhhhhhhhhhh 
+Wobei die Buchstaben I, J, H, K alpha-spezifischen Strukturen  und F, E, C, D sheet-spezifischen Strukturen zugeordnet sind.
+Das Informationsmaß wurde nach Shannon berechnet (low complexity region) 
+```{r echo=FALSE, fig.width=10}
+
+shannon <- function(S) {
+  freq <- table(unlist(strsplit(S, split = "")))
+  kv <- c(sort(freq, decreasing = T), rep(0, 17 - min(17,length(freq))))
+  -1 * sum(kv / nchar(S) * log(kv / nchar(S)), na.rm=T)
+}
+
+
+cath.annotated.filtered <- cath.annotated %>% filter(L > 15) %>% rowwise %>% mutate(kv = tryCatch(shannon(motif), error = function(e) -1))
+
+cath.annotated.filtered %>% ggplot(aes(kv)) + geom_histogram(binwidth = 0.05) + scale_x_continuous(breaks = seq(0,3,0.2)) + ggtitle("Häufigkeitsverteilung des Informationsmaßes nach Shannon")
+
+
+```
+
+
+
+#### Wie sehen "informative" Motife aus 
+```{r echo=FALSE}
+
+head(cath.annotated.filtered %>% 
+  filter(kv > 1.5) %>% select(motif, C,A,TO, kv))
+  
+
+```
+
+
+```{r eval=FALSE, include=FALSE}
+
+
+
+```
+
+
